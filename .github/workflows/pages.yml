@@ -1,0 +1,58 @@
+# GitHubに置く場所: .github/workflows/pages.yml
+# リポジトリのシークレット GAS_URL を index.html の __GAS_URL__ に差し込んでから公開する
+
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Inject GAS_URL
+        env:
+          GAS_URL: ${{ secrets.GAS_URL }}
+        run: |
+          echo "[開始] GAS_URL の差し込み"
+          if [ -z "$GAS_URL" ]; then
+            echo "[エラー] シークレット GAS_URL が空です。Settings > Secrets and variables > Actions で登録してください"
+            exit 1
+          fi
+          echo "[確認] シークレット長さ: ${#GAS_URL}"
+          mkdir -p dist
+          sed "s|__GAS_URL__|${GAS_URL}|g" index.html > dist/index.html
+          if grep -q "__GAS_URL__" dist/index.html; then
+            echo "[エラー] 置換後も __GAS_URL__ が残っています"
+            exit 1
+          fi
+          echo "[完了] dist/index.html を生成しました"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
