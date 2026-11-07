@@ -27,7 +27,7 @@
 <main>
   <video id="video" playsinline muted hidden></video>
   <button id="scanBtn" type="button">カメラでスキャン</button>
-  <input id="q" type="text" inputmode="numeric" maxlength="13" placeholder="13桁の数字" autocomplete="off">
+  <input id="q" type="text" inputmode="numeric" maxlength="13" placeholder="13桁の数字" autocomplete="off"/>
   <button id="goBtn" type="button">検索</button>
   <div id="box"></div>
   <p id="msg"></p>
@@ -91,6 +91,8 @@ async function startScan() {
           $("q").value = hit.rawValue;
           stopScan();
           log("C03");
+          // ↓ デバッグ行追加：スキャン後に桁数と末尾文字コードを表示
+          show("len=" + hit.rawValue.length + " last=" + hit.rawValue.charCodeAt(hit.rawValue.length - 1));
           return;
         }
       } catch (e) {
