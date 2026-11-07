@@ -43,6 +43,8 @@ jobs:
             echo "[P91]"
             exit 1
           fi
+          cp muu_ok.jpg dist/muu_ok.jpg
+          cp muu_ng.jpg dist/muu_ng.jpg
           echo "[P03]"
 
       - name: Upload artifact
