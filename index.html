@@ -3,49 +3,54 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JANチェック</title>
+<title>チェック</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; background: #f5f6f8; color: #1d2330; }
   main { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
-  h1 { font-size: 20px; margin: 4px 0 0; }
   video { width: 100%; border-radius: 12px; background: #000; }
   button { font-size: 18px; padding: 16px; border: 0; border-radius: 12px; font-weight: 600; }
   #scanBtn { background: #dfe4ee; color: #1d2330; }
-  #searchBtn { background: #1f5eff; color: #fff; }
+  #goBtn { background: #1f5eff; color: #fff; }
   input { font-size: 22px; padding: 14px; border: 2px solid #c5ccdb; border-radius: 12px; letter-spacing: 1px; width: 100%; }
   input:focus-visible, button:focus-visible { outline: 3px solid #1f5eff; outline-offset: 2px; }
-  #result { border-radius: 14px; padding: 18px; min-height: 0; }
-  #result.found { background: #dff5e3; border: 2px solid #2e9a4d; }
-  #result.notfound { background: #ececf0; border: 2px solid #9aa1b2; }
-  #result.error { background: #fde4e4; border: 2px solid #d64545; }
-  #result .big { font-size: 30px; font-weight: 700; margin: 0 0 8px; }
-  #result .name { font-size: 18px; margin: 4px 0; word-break: break-all; }
-  #status { font-size: 14px; color: #5a6275; margin: 0; word-break: break-all; }
+  #box { border-radius: 14px; padding: 18px; min-height: 0; }
+  #box.ok { background: #dff5e3; border: 2px solid #2e9a4d; }
+  #box.no { background: #ececf0; border: 2px solid #9aa1b2; }
+  #box.ng { background: #fde4e4; border: 2px solid #d64545; }
+  #box .big { font-size: 30px; font-weight: 700; margin: 0 0 8px; }
+  #box .txt { font-size: 18px; margin: 4px 0; word-break: break-all; }
+  #msg { font-size: 14px; color: #5a6275; margin: 0; word-break: break-all; }
 </style>
 </head>
 <body>
 <main>
-  <h1>JANチェック</h1>
   <video id="video" playsinline muted hidden></video>
   <button id="scanBtn" type="button">カメラでスキャン</button>
-  <input id="jan" type="text" inputmode="numeric" maxlength="13" placeholder="13桁のJANコード" autocomplete="off">
-  <button id="searchBtn" type="button">検索</button>
-  <div id="result"></div>
-  <p id="status"></p>
+  <input id="q" type="text" inputmode="numeric" maxlength="13" placeholder="13桁の数字" autocomplete="off">
+  <button id="goBtn" type="button">検索</button>
+  <div id="box"></div>
+  <p id="msg"></p>
 </main>
 
 <script>
-// GitHub Actions が公開時に、シークレット GAS_URL の値へ置き換える（ここには書かない）
-const GAS_URL = "__GAS_URL__";
+const EP = "__EP__";
 
 const $ = id => document.getElementById(id);
 let stream = null;
 let scanning = false;
 
-function log(msg) {
-  console.log(msg);
-  $("status").textContent = msg;
+function log(c) {
+  console.log(c);
+}
+
+function show(t) {
+  console.log(t);
+  $("msg").textContent = t;
+}
+
+function clearMsg() {
+  $("msg").textContent = "";
 }
 
 function stopScan() {
@@ -59,12 +64,13 @@ function stopScan() {
 }
 
 async function startScan() {
+  clearMsg();
   if (!("BarcodeDetector" in window)) {
-    log("このブラウザはスキャン非対応です。手入力してください（AndroidのChromeで開いてください）");
+    show("この端末では読み取れません。数字を入力してください");
     return;
   }
   try {
-    log("カメラを起動中...");
+    log("C01");
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
     const video = $("video");
     video.srcObject = stream;
@@ -72,24 +78,24 @@ async function startScan() {
     await video.play();
     $("scanBtn").textContent = "スキャン停止";
 
-    const detector = new BarcodeDetector({ formats: ["ean_13"] });
+    const det = new BarcodeDetector({ formats: ["ean_13"] });
     scanning = true;
-    log("バーコードをかざしてください");
+    log("C02");
 
     const loop = async () => {
       if (!scanning) return;
       try {
-        const codes = await detector.detect(video);
+        const codes = await det.detect(video);
         const hit = codes.find(c => /^\d{13}$/.test(c.rawValue));
         if (hit) {
-          $("jan").value = hit.rawValue;
+          $("q").value = hit.rawValue;
           stopScan();
-          log("読み取り成功: " + hit.rawValue + "（検索ボタンを押してください）");
+          log("C03");
           return;
         }
       } catch (e) {
         stopScan();
-        log("読み取りエラー: " + e);
+        show("読み取りに失敗しました (C04 " + e + ")");
         return;
       }
       requestAnimationFrame(loop);
@@ -97,7 +103,7 @@ async function startScan() {
     loop();
   } catch (e) {
     stopScan();
-    log("カメラエラー: " + e.name + " / " + e.message);
+    show("カメラを使えません (C05 " + e.name + ")");
   }
 }
 
@@ -108,63 +114,51 @@ function line(cls, text) {
   return p;
 }
 
-async function search() {
-  const jan = $("jan").value.trim();
-  const r = $("result");
-  r.className = "";
-  r.replaceChildren();
+async function go() {
+  clearMsg();
+  const q = $("q").value.trim();
+  const b = $("box");
+  b.className = "";
+  b.replaceChildren();
 
-  if (!/^\d{13}$/.test(jan)) {
-    log("13桁の数字を入力してください");
+  if (!/^\d{13}$/.test(q)) {
+    show("13桁の数字を入力してください");
     return;
   }
 
-  // URLが差し込まれていない（https:// で始まらない）場合は通信せずに止める
-  if (GAS_URL.indexOf("https://") !== 0) {
-    r.className = "error";
-    r.append(line("name", "設定エラー: GAS_URLが差し込まれていません"));
-    log("設定エラー: GAS_URLが差し込まれていません（GitHubのシークレットとデプロイを確認）");
+  if (EP.indexOf("https://") !== 0) {
+    b.className = "ng";
+    b.append(line("txt", "設定エラー (S00)"));
     return;
   }
 
   try {
-    log("検索中...（スプレッドシートに問い合わせています）");
-    const res = await fetch(GAS_URL + "?jan=" + encodeURIComponent(jan));
-    log("応答を受信 HTTP " + res.status);
+    log("S01");
+    const res = await fetch(EP + "?q=" + encodeURIComponent(q));
+    log("S02 " + res.status);
     const data = await res.json();
+    log("S03 r=" + data.r);
 
-    if (data.status === "found") {
-      r.className = "found";
-      r.append(line("big", "あるよ！"));
-      if (data.name1) r.append(line("name", data.name1));
-      if (data.name2) r.append(line("name", data.name2));
-      log("検索完了: " + jan + " は登録されています");
-    } else if (data.status === "notfound") {
-      r.className = "notfound";
-      r.append(line("big", "ないね。。"));
-      log("検索完了: " + jan + " は登録されていません");
+    if (data.r === 1) {
+      b.className = "ok";
+      b.append(line("big", "あるよ！"));
+      if (data.x) b.append(line("txt", data.x));
+      if (data.y) b.append(line("txt", data.y));
+    } else if (data.r === 0) {
+      b.className = "no";
+      b.append(line("big", "ないね。。"));
     } else {
-      r.className = "error";
-      r.append(line("name", "エラー: " + (data.message || "不明")));
-      log("サーバーエラー: " + (data.message || "不明"));
+      b.className = "ng";
+      b.append(line("txt", "エラー " + (data.m || "S08")));
     }
   } catch (e) {
-    r.className = "error";
-    r.append(line("name", "通信に失敗しました"));
-    const tests = [];
-    tests.push("URL先頭=" + GAS_URL.slice(0, 35) + " 末尾=" + GAS_URL.slice(-6) + " 空白あり=" + /\s/.test(GAS_URL));
-    try {
-      await fetch(GAS_URL + "?jan=" + encodeURIComponent(jan), { mode: "no-cors" });
-      tests.push("no-cors=到達OK(応答は読めない)");
-    } catch (e2) {
-      tests.push("no-cors=失敗 " + e2);
-    }
-    log("通信エラー: " + e + " | " + tests.join(" | ") + " | 長さ=" + GAS_URL.length + " | origin=" + location.origin + " | online=" + navigator.onLine);
+    b.className = "ng";
+    b.append(line("txt", "通信に失敗しました (S09 " + e + ")"));
   }
 }
 
-$("scanBtn").addEventListener("click", () => (scanning ? (stopScan(), log("スキャンを停止しました")) : startScan()));
-$("searchBtn").addEventListener("click", search);
+$("scanBtn").addEventListener("click", () => (scanning ? stopScan() : startScan()));
+$("goBtn").addEventListener("click", go);
 </script>
 </body>
 </html>
