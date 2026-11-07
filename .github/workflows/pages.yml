@@ -1,6 +1,3 @@
-# GitHubに置く場所: .github/workflows/pages.yml
-# リポジトリのシークレット GAS_URL を index.html の __GAS_URL__ に差し込んでから公開する
-
 name: Deploy Pages
 
 on:
@@ -30,23 +27,23 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Inject GAS_URL
+      - name: Prepare
         env:
-          GAS_URL: ${{ secrets.GAS_URL }}
+          EP: ${{ secrets.EP_URL }}
         run: |
-          echo "[開始] GAS_URL の差し込み"
-          if [ -z "$GAS_URL" ]; then
-            echo "[エラー] シークレット GAS_URL が空です。Settings > Secrets and variables > Actions で登録してください"
+          echo "[P01]"
+          if [ -z "$EP" ]; then
+            echo "[P90]"
             exit 1
           fi
-          echo "[確認] シークレット長さ: ${#GAS_URL}"
+          echo "[P02] n=${#EP}"
           mkdir -p dist
-          sed "s|__GAS_URL__|${GAS_URL}|g" index.html > dist/index.html
-          if grep -q "__GAS_URL__" dist/index.html; then
-            echo "[エラー] 置換後も __GAS_URL__ が残っています"
+          sed "s|__EP__|${EP}|g" index.html > dist/index.html
+          if grep -q "__EP__" dist/index.html; then
+            echo "[P91]"
             exit 1
           fi
-          echo "[完了] dist/index.html を生成しました"
+          echo "[P03]"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
