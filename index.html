@@ -6,7 +6,17 @@
 <title>チェック</title>
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; background: #f5f6f8; color: #1d2330; }
+  body {
+    margin: 0;
+    font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    background: #f5f6f8;
+    color: #1d2330;
+    transition: background-image 0.3s;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+  }
   main { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
   video { width: 100%; border-radius: 12px; background: #000; }
   button { font-size: 18px; padding: 16px; border: 0; border-radius: 12px; font-weight: 600; }
@@ -15,9 +25,9 @@
   input { font-size: 22px; padding: 14px; border: 2px solid #c5ccdb; border-radius: 12px; letter-spacing: 1px; width: 100%; }
   input:focus-visible, button:focus-visible { outline: 3px solid #1f5eff; outline-offset: 2px; }
   #box { border-radius: 14px; padding: 18px; min-height: 0; }
-  #box.ok { background: #dff5e3; border: 2px solid #2e9a4d; }
-  #box.no { background: #ececf0; border: 2px solid #9aa1b2; }
-  #box.ng { background: #fde4e4; border: 2px solid #d64545; }
+  #box.ok { background: rgba(223,245,227,0.85); border: 2px solid #2e9a4d; }
+  #box.no { background: rgba(236,236,240,0.85); border: 2px solid #9aa1b2; }
+  #box.ng { background: rgba(253,228,228,0.85); border: 2px solid #d64545; }
   #box .big { font-size: 30px; font-weight: 700; margin: 0 0 8px; }
   #box .txt { font-size: 18px; margin: 4px 0; word-break: break-all; }
   #msg { font-size: 14px; color: #5a6275; margin: 0; word-break: break-all; }
@@ -40,18 +50,14 @@ const $ = id => document.getElementById(id);
 let stream = null;
 let scanning = false;
 
-function log(c) {
-  console.log(c);
-}
+function log(c) { console.log(c); }
 
 function show(t) {
   console.log(t);
   $("msg").textContent = t;
 }
 
-function clearMsg() {
-  $("msg").textContent = "";
-}
+function clearMsg() { $("msg").textContent = ""; }
 
 function stopScan() {
   scanning = false;
@@ -91,8 +97,6 @@ async function startScan() {
           $("q").value = hit.rawValue;
           stopScan();
           log("C03");
-          // ↓ デバッグ行追加：スキャン後に桁数と末尾文字コードを表示
-          show("len=" + hit.rawValue.length + " last=" + hit.rawValue.charCodeAt(hit.rawValue.length - 1));
           return;
         }
       } catch (e) {
@@ -142,25 +146,3 @@ async function go() {
     log("S03 r=" + data.r);
 
     if (data.r === 1) {
-      b.className = "ok";
-      b.append(line("big", "あるよ！"));
-      if (data.x) b.append(line("txt", data.x));
-      if (data.y) b.append(line("txt", data.y));
-    } else if (data.r === 0) {
-      b.className = "no";
-      b.append(line("big", "ないね。。"));
-    } else {
-      b.className = "ng";
-      b.append(line("txt", "エラー " + (data.m || "S08")));
-    }
-  } catch (e) {
-    b.className = "ng";
-    b.append(line("txt", "通信に失敗しました (S09 " + e + ")"));
-  }
-}
-
-$("scanBtn").addEventListener("click", () => (scanning ? stopScan() : startScan()));
-$("goBtn").addEventListener("click", go);
-</script>
-</body>
-</html>
