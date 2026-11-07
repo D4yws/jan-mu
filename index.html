@@ -151,7 +151,15 @@ async function search() {
   } catch (e) {
     r.className = "error";
     r.append(line("name", "通信に失敗しました"));
-    log("通信エラー: " + e + " | URL長さ=" + GAS_URL.length + " | origin=" + location.origin + " | online=" + navigator.onLine);
+    const tests = [];
+    tests.push("URL先頭=" + GAS_URL.slice(0, 35) + " 末尾=" + GAS_URL.slice(-6) + " 空白あり=" + /\s/.test(GAS_URL));
+    try {
+      await fetch(GAS_URL + "?jan=" + encodeURIComponent(jan), { mode: "no-cors" });
+      tests.push("no-cors=到達OK(応答は読めない)");
+    } catch (e2) {
+      tests.push("no-cors=失敗 " + e2);
+    }
+    log("通信エラー: " + e + " | " + tests.join(" | ") + " | 長さ=" + GAS_URL.length + " | origin=" + location.origin + " | online=" + navigator.onLine);
   }
 }
 
