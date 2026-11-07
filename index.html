@@ -146,3 +146,29 @@ async function go() {
     log("S03 r=" + data.r);
 
     if (data.r === 1) {
+      document.body.style.backgroundImage = "url('muu_ok.jpg')";
+      b.className = "ok";
+      b.append(line("big", "あるよ！"));
+      if (data.x) b.append(line("txt", data.x));
+      if (data.y) b.append(line("txt", data.y));
+    } else if (data.r === 0) {
+      document.body.style.backgroundImage = "url('muu_ng.jpg')";
+      b.className = "no";
+      b.append(line("big", "ないね。。"));
+    } else {
+      document.body.style.backgroundImage = "";
+      b.className = "ng";
+      b.append(line("txt", "エラー " + (data.m || "S08")));
+    }
+  } catch (e) {
+    document.body.style.backgroundImage = "";
+    b.className = "ng";
+    b.append(line("txt", "通信に失敗しました (S09 " + e + ")"));
+  }
+}
+
+$("scanBtn").addEventListener("click", () => (scanning ? stopScan() : startScan()));
+$("goBtn").addEventListener("click", go);
+</script>
+</body>
+</html>
